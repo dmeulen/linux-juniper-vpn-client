@@ -4,6 +4,7 @@ _jcpath=$HOME/.juniper_networks
 _ncpath=$_jcpath/network_connect
 _cfgfile=$HOME/.junipervpn.cfg
 _logfile=$HOME/.junipervpn.log
+_lockfile=$HOME/.junipervpn.lock
 _ssl=$_ncpath/ssl.der
 _title="juniperVPN"
 
@@ -89,9 +90,12 @@ fetch_dsid() {
 start_vpn() {
     # start the actual vpn client
     (
+    touch $_lockfile
     cd $_ncpath
     echo $_PASSWORD | ./ncui -h $_REMOTE_HOST -u $_USERNAME -c DSID=$_DSID -f $_SSL_CERT
+    rm -f $_lockfile
     ) &
+    sleep 5
 }
 
 add_routes() {
@@ -124,6 +128,22 @@ main() {
     _notify=$(which notify-send)
     [[ -z $_notify ]] && die "Could not find 'notify-send' binary..."
 
+    # vpn is active, remove lock on YES
+    if [[ -e $_lockfile ]]; then
+        if $_zenity --question --text "VPN active, kill it?"; then
+            rm -f $_lockfile
+            exit 0
+        else
+            exit 0
+        fi
+    fi
+
+    # restart myself in background
+    if [[ "x$1" != "x--" ]]; then
+        $0 -- >> $_logfile 2>&1 &
+        exit 0
+    fi
+
     if [[ ! -d $_jcpath ]]; then
         setup
         exit 0
@@ -145,6 +165,14 @@ main() {
     [[ $_DSID ]] || die "Session ID not found"
 
     start_vpn
+
+    # sleep until the lockfile has been removed, kill ncui if it was.
+    while [[ -e $_lockfile ]]; do
+        sleep 1
+    done
+
+    killall ncui > /dev/null 2>&1
+    msg "Juniper VPN client was killed"
 
 }
 
