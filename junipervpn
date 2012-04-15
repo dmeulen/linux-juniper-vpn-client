@@ -1,23 +1,45 @@
 #!/bin/bash
 
+_jcpath=$HOME/.juniper_networks
+_ncpath=$_jcpath/network_connect
+_cfgfile=$HOME/.junipervpn.cfg
+_logfile=$HOME/.junipervpn.log
+_ssl=$_ncpath/ssl.der
+_title="juniperVPN"
+
 log() {
     # print line to logfile
-    echo > /dev/null
+    echo "$*" >> $_logfile
 }
 
 die() {
     # die with error message
-    echo > /dev/null
+    log "ERROR: $*"
+    $_zenity --error --text "$*"
+    exit 1
 }
 
 msg() {
     # print message for user
-    echo > /dev/null
+    $_zenity --info --text "$*"
 }
 
 notif() {
     # print message via notification deamon
-    echo > /dev/null
+    $_notify "$*"
+}
+
+input() {
+    # get input from user
+    while [[ -n "$1" ]]; do
+        case "$1" in
+            (pass*)     _zopts="$_zopts --hide-text";;
+            (entry)     _zopts="$_zopts --entry-text $2"; shift ;;
+            (*)         _text="$1";;
+        esac
+        shift
+    done
+    $_zenity --entry $_zopts --text "$_text"
 }
 
 setup() {
@@ -27,17 +49,33 @@ setup() {
 
 configure() {
     # configure the unconfigured
-    echo > /dev/null
+    _REMOTE_HOST=$(input "Enter remote hostname")
+    _USERNAME=$(input entry "$USERNAME" "Enter username")
+    if [[ ! -x $_cfgfile ]]; then
+        echo "_REMOTE_HOST=\"$_REMOTE_HOST\"" > $_cfgfile
+        echo "_USERNAME=\"$_USERNAME\"" >> $_cfgfile
+    fi
 }
 
 fetch_ssl() {
     # get ssl certificate
-    echo > /dev/null
+    echo | openssl s_client -connect $_REMOTE_HOST:443 2>&1 | \
+        sed -ne '/-BEGIN CERTIFICATE-/,/-ENDCERTIFICATE-/p' |\
+        openssl x509 -outform der > $_ssl
 }
 
 fetch_dsid() {
     # get dsid
-    echo > /dev/null
+    curl -k -v -s -c - -d username=$_USERNAME -d password=$_PASSWORD -d 'realm=Secure ID' \
+        -d 'btnSubmit=Sign In' https://$_REMOTE_HOST/dana-na/auth/url-default/login.cgi
+}
+
+start_vpn() {
+    # start the actual vpn client
+    (
+    cd $_ncpath
+    echo $_PASSWORD | ./ncui -h $_REMOTE_HOST -u $_USERNAME -c DSID=$_DSID -f $_ssl
+    ) &
 }
 
 add_routes() {
@@ -57,7 +95,23 @@ set_lock() {
 
 main() {
     # main part
-    echo > /dev/null
+
+    _zenity=$(which zenity)
+    [[ -z $_zenity ]] && die "Could not find 'zenity' binary..."
+    _zenity="$_zenity --title $_title"
+
+    _notify=$(which notify-send)
+    [[ -z $_notify ]] && die "Could not find 'notify-send' binary..."
+
+    if [[ ! -d $_jcpath ]]; then
+        setup
+        exit 0
+    fi
+
+    # source config file
+    [[ -r $_cfgfile ]] && . $_cfgfile
+    [[ ! $_REMOTE_HOST ]] || [[ ! $_USERNAME ]] && configure
+
 }
 
 main "$*"
