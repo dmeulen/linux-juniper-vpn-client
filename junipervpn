@@ -15,7 +15,7 @@ log() {
 die() {
     # die with error message
     log "ERROR: $*"
-    $_zenity --error --text "$*"
+    $_zenity --text "$*"
     exit 1
 }
 
@@ -66,8 +66,24 @@ fetch_ssl() {
 
 fetch_dsid() {
     # get dsid
-    curl -k -v -s -c - -d username=$_USERNAME -d password=$_PASSWORD -d 'realm=Secure ID' \
-        -d 'btnSubmit=Sign In' https://$_REMOTE_HOST/dana-na/auth/url-default/login.cgi
+    local _result=$(
+        curl -k -v -s -c - -d username=$_USERNAME -d password=$_PASSWORD -d 'realm=Secure ID' \
+            -d 'btnSubmit=Sign In' https://$_REMOTE_HOST/dana-na/auth/url-default/login.cgi | \
+            egrep "(location:.*confirm|^$_REMOTE_HOST.*DSID)"
+        )
+
+    if grep -q "location:.*confirm"; then
+        # Another session is already active
+        # give the user instructions how to end that one
+        _sessionurl="${_result#*:}"
+        echo "Another session is active, go to $_sessionurl and end your session." | \
+            zenity --title=$_title --text-info
+        die "Another session was active."
+    else
+        local _DSID=$(echo $_result | awk '/DSID/ { print $7 }')
+        [[ _DSID ]] || die "Could not fetch DSID..."
+    fi
+    echo $_DSID
 }
 
 start_vpn() {
@@ -108,11 +124,20 @@ main() {
         exit 0
     fi
 
+    # set default ssl certificate path, can be overridden in cfgfile
     _SSL_CERT=$_ssl
 
-    # source config file
     [[ -r $_cfgfile ]] && . $_cfgfile
+
     [[ ! $_REMOTE_HOST ]] || [[ ! $_USERNAME ]] && configure
+
+    [[ ! -r $_SSL_CERT ]] || [[ -z $_ssl ]] && fetch_ssl
+
+    _PASSWORD=$(input password "Enter PIN+SecureID")
+
+    _DSID=$(fetch_dsid)
+
+    start_vpn
 
 }
 
