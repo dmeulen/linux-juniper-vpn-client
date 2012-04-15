@@ -1,0 +1,65 @@
+#!/bin/bash
+
+log() {
+    # print line to logfile
+    echo > /dev/null
+}
+
+die() {
+    # die with error message
+    echo > /dev/null
+}
+
+msg() {
+    # print message for user
+    echo > /dev/null
+}
+
+notif() {
+    # print message via notification deamon
+    echo > /dev/null
+}
+
+setup() {
+    # install the binary
+    echo > /dev/null
+}
+
+configure() {
+    # configure the unconfigured
+    echo > /dev/null
+}
+
+fetch_ssl() {
+    # get ssl certificate
+    echo > /dev/null
+}
+
+fetch_dsid() {
+    # get dsid
+    echo > /dev/null
+}
+
+add_routes() {
+    # set additional routes
+    echo > /dev/null
+}
+
+test_connection() {
+    # test the connection
+    echo > /dev/null
+}
+
+set_lock() {
+    # set lockfile etc
+    echo > /dev/null
+}
+
+main() {
+    # main part
+    echo > /dev/null
+}
+
+main "$*"
+
+
