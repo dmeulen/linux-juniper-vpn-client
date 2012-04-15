@@ -72,7 +72,7 @@ fetch_dsid() {
             egrep "(location:.*confirm|^$_REMOTE_HOST.*DSID)"
         )
 
-        if [[ -n "$(echo $_result | grep 'location:.*confirm')" ]]; then
+    if [[ -n "$(echo $_result | grep 'location:.*confirm')" ]]; then
         # Another session is already active
         # give the user instructions how to end that one
         _sessionurl="${_result#*:}"
