@@ -15,7 +15,7 @@ log() {
 die() {
     # die with error message
     log "ERROR: $*"
-    $_zenity --text "$*"
+    $_zenity --error --text "$*"
     exit 1
 }
 
@@ -68,20 +68,20 @@ fetch_dsid() {
     # get dsid
     local _result=$(
         curl -k -v -s -c - -d username=$_USERNAME -d password=$_PASSWORD -d 'realm=Secure ID' \
-            -d 'btnSubmit=Sign In' https://$_REMOTE_HOST/dana-na/auth/url-default/login.cgi | \
+            -d 'btnSubmit=Sign In' https://$_REMOTE_HOST/dana-na/auth/url_default/login.cgi 2>&1 | \
             egrep "(location:.*confirm|^$_REMOTE_HOST.*DSID)"
         )
 
-    if grep -q "location:.*confirm"; then
+        if [[ -n "$(echo $_result | grep 'location:.*confirm')" ]]; then
         # Another session is already active
         # give the user instructions how to end that one
         _sessionurl="${_result#*:}"
-        echo "Another session is active, go to $_sessionurl and end your session." | \
-            zenity --title=$_title --text-info
-        die "Another session was active."
+        # remove leading spaces
+        read  -rd '' _sessionurl <<< "$_sessionurl"
+        xdg-open "$_sessionurl"
+        msg "Another session was active, please close it. It should be opened in your browser."
     else
         local _DSID=$(echo $_result | awk '/DSID/ { print $7 }')
-        [[ _DSID ]] || die "Could not fetch DSID..."
     fi
     echo $_DSID
 }
@@ -106,6 +106,11 @@ test_connection() {
 
 set_lock() {
     # set lockfile etc
+    echo > /dev/null
+}
+
+remove_lock() {
+    # remove lock etc
     echo > /dev/null
 }
 
@@ -134,8 +139,10 @@ main() {
     [[ ! -r $_SSL_CERT ]] || [[ -z $_ssl ]] && fetch_ssl
 
     _PASSWORD=$(input password "Enter PIN+SecureID")
+    [[ $_PASSWORD ]] || die "PIN+SecureID not specified"
 
     _DSID=$(fetch_dsid)
+    [[ $_DSID ]] || die "Session ID not found"
 
     start_vpn
 
