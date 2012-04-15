@@ -74,7 +74,7 @@ start_vpn() {
     # start the actual vpn client
     (
     cd $_ncpath
-    echo $_PASSWORD | ./ncui -h $_REMOTE_HOST -u $_USERNAME -c DSID=$_DSID -f $_ssl
+    echo $_PASSWORD | ./ncui -h $_REMOTE_HOST -u $_USERNAME -c DSID=$_DSID -f $_SSL_CERT
     ) &
 }
 
@@ -107,6 +107,8 @@ main() {
         setup
         exit 0
     fi
+
+    _SSL_CERT=$_ssl
 
     # source config file
     [[ -r $_cfgfile ]] && . $_cfgfile
