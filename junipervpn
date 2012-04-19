@@ -27,7 +27,7 @@ msg() {
 
 notif() {
     # print message via notification deamon
-    $_notify "$*"
+    $_notify -t 5000 "$*"
 }
 
 input() {
@@ -77,8 +77,11 @@ fetch_dsid() {
         # Another session is already active
         # give the user instructions how to end that one
         _sessionurl="${_result#*:}"
+
         # remove leading spaces
         read  -rd '' _sessionurl <<< "$_sessionurl"
+
+        # open url in default web browser
         xdg-open "$_sessionurl"
         msg "Another session was active, please close it. It should be opened in your browser."
     else
@@ -172,7 +175,7 @@ main() {
     done
 
     killall ncui > /dev/null 2>&1
-    msg "Juniper VPN client was killed"
+    notify "Juniper VPN client was killed"
 
 }
 
