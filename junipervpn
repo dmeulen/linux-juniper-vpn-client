@@ -103,22 +103,22 @@ start_vpn() {
 
 add_routes() {
     # set additional routes
-    echo > /dev/null
+    :
 }
 
 test_connection() {
     # test the connection
-    echo > /dev/null
+    :
 }
 
 set_lock() {
     # set lockfile etc
-    echo > /dev/null
+    :
 }
 
 remove_lock() {
     # remove lock etc
-    echo > /dev/null
+    :
 }
 
 main() {
